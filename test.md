@@ -12,3 +12,9 @@ a python script to generate the toc (table of contents) of markdown
 - [ ] js version and a chrome extenstion
 
 ### da # sdsa
+
+```
+# A
+# B
+# C
+```
