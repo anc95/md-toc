@@ -3,7 +3,7 @@ import requests
 import argparse
 
 HEADER_REG = re.compile('^(#{1,6})\s+(\S+.*)')
-ILLEGAL_ID_LETTER_REG = re.compile('[^a-zA-Z-_]*')
+ILLEGAL_ID_LETTER_REG = re.compile('[^a-zA-Z0-9-_]*')
 SPACE_REG = re.compile('\s+')
 LINK_REG = re.compile('^https{0,1}://')
 CODE_ZONE_REG = re.compile('^```')
