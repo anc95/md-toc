@@ -11,53 +11,73 @@ CODE_ZONE_REG = re.compile('^```')
 def main():
     parser = argparse.ArgumentParser(description='generate toc of markdown')
     parser.add_argument('md', metavar='markdown', nargs=1, help="markdown file from local or internet")
-    parser.add_argument('-d --dest', metavar='dest_file', nargs=1, help="the result write to a file")
+    parser.add_argument('-i', dest='insert', action='store_true', help='insert the toc into md')
     args = parser.parse_args()
-    # print args.dest
-    print get_toc(args.md[0])
+    toc_ins = Toc(args.md[0], args.insert)
+    print toc_ins.get_toc()
 
-def get_toc(md):
-    header_list = parse_file_header(md)
-    toc = header_list_2_md(header_list)
-    return toc
+class Toc:
+    def __init__(self, md, if_insert):
+        self.md = md
+        self.if_insert = if_insert
 
-def parse_file_header(file):
-    header_List = []
-    md_content = ''
-    if LINK_REG.match(file):
-        md_content = requests.get(file).text.split('\n')
-    else:
-        with open(file, 'r') as f:
-            md_content = f.read().split('\n')
-    inCode = False
-    for line in md_content:
-        if CODE_ZONE_REG.match(line):
-            inCode = not inCode
-        if not inCode:
-            m = HEADER_REG.match(line)
-            if m:
-                level = len(m.group(1))
-                name = m.group(2).strip()
-                id = cal_header_id(name)
-                header_List.append({
-                    "name": name,
-                    "level": level,
-                    "id": id
-                })
-    return header_List
+    def get_toc(self):
+        md_content = ''
+        file = self.md
+        if LINK_REG.match(file):
+            md_content = requests.get(file).text.split('\n')
+        else:
+            with open(file, 'r') as f:
+                md_content = f.read().split('\n')
 
-def header_list_2_md(header_list):
-    md = ''
-    for header in header_list:
-        level = header.get('level')
-        name = header.get('name')
-        id = header.get('id')
-        md +=  '{}- [{}](#{})\n'.format(' ' * 2 * level, name, id)
-    return md
+        (header_list, insert_line_index) = self.parse_file_header(md_content)
+        toc = self.header_list_2_md(header_list)
+        
+        if self.if_insert:
+            toc = self.insert_toc(md_content, toc, insert_line_index)
+        
+        return toc
+            
+    def parse_file_header(self, md_content):
+        header_List = []
+        insert_line_index = 0
+        inCode = False
+        for index in range(len(md_content)):
+            line = md_content[index]
+            if self.if_insert and (line.lower() == '@{md-toc}@'):
+                insert_line_index = index
 
-def cal_header_id(header):
-    header = SPACE_REG.sub('-', header).lower()
-    return ILLEGAL_ID_LETTER_REG.sub('', header)
+            if CODE_ZONE_REG.match(line):
+                inCode = not inCode
+            if not inCode:
+                m = HEADER_REG.match(line)
+                if m:
+                    level = len(m.group(1))
+                    name = m.group(2).strip()
+                    id = self.cal_header_id(name)
+                    header_List.append({
+                        "name": name,
+                        "level": level,
+                        "id": id
+                    })
+        return (header_List, insert_line_index)
+
+    def header_list_2_md(self, header_list):
+        md = ''
+        for header in header_list:
+            level = header.get('level')
+            name = header.get('name')
+            id = header.get('id')
+            md +=  '{}- [{}](#{})\n'.format(' ' * 2 * level, name, id)
+        return md
+
+    def cal_header_id(self, header):
+        header = SPACE_REG.sub('-', header).lower()
+        return ILLEGAL_ID_LETTER_REG.sub('', header)
+
+    def insert_toc(self, md_content, toc, line_index):
+        md_content[line_index] = toc
+        return '\n'.join(md_content)
 
 if __name__ == '__main__':
     main()
